@@ -41,43 +41,7 @@ https://stackoverflow.com/questions/24853450/errors-using-lapack-c-header-in-c-w
 #define lapack_complex_double std::complex<double>
 #include "lapacke.h"
 
-inline std::complex<double> DetCplx(std::complex<double>** mat, int dim) {
-  switch (dim) {
-  case 1: return DetCplx1x1(mat);
-    break;
-  case 2:return DetCplx2x2(mat);
-    break;
-  case 3:return DetCplx3x3(mat);
-    break;
-  case 4:return DetCplx4x4(mat);
-    break;
-  case 5:return DetCplx5x5(mat);
-    break;
-  case 6:return DetCplx6x6(mat);
-    break;
-  default:return DetCplxNxN(mat,dim);
-    break;
-  }
-}
 
-inline std::complex<double> InvertCplx(std::complex<double>** A, std::complex<double>** B, int dim) {
-  switch (dim) {
-  case 1: InvertCplx1x1(A,B);
-    break;
-  case 2: InvertCplx2x2(A, B);
-    break;
-  case 3:InvertCplx3x3(A, B);
-    break;
-  case 4:InvertCplx4x4(A, B);
-    break;
-  case 5:InvertCplx5x5(A, B);
-    break;
-  case 6:InvertCplx6x6(A, B);
-    break;
-  default:InvertCplxNxN(A, B, dim);
-    break;
-  }
-}
 
 inline std::complex<double> DetCplxNxN(std::complex<double>** mat, int dim) {
   int i;
@@ -676,6 +640,44 @@ inline std::complex<double> DetCplx6x6(std::complex<double>** A)
   std::complex<double> det(A[0][0] * b0 + A[0][1] * b1 + A[0][2] * b2 + A[0][3] * b3 + A[0][4] * b4 + A[0][5] * b5);
   return det;
 
+}
+
+inline std::complex<double> DetCplx(std::complex<double>** mat, int dim) {
+  switch (dim) {
+  case 1: return DetCplx1x1(mat);
+    break;
+  case 2:return DetCplx2x2(mat);
+    break;
+  case 3:return DetCplx3x3(mat);
+    break;
+  case 4:return DetCplx4x4(mat);
+    break;
+  case 5:return DetCplx5x5(mat);
+    break;
+  case 6:return DetCplx6x6(mat);
+    break;
+  default:return DetCplxNxN(mat, dim);
+    break;
+  }
+}
+
+inline std::complex<double> InvertCplx(std::complex<double>** A, std::complex<double>** B, int dim) {
+  switch (dim) {
+  case 1: InvertCplx1x1(A, B);
+    break;
+  case 2: InvertCplx2x2(A, B);
+    break;
+  case 3:InvertCplx3x3(A, B);
+    break;
+  case 4:InvertCplx4x4(A, B);
+    break;
+  case 5:InvertCplx5x5(A, B);
+    break;
+  case 6:InvertCplx6x6(A, B);
+    break;
+  default:InvertCplxNxN(A, B, dim);
+    break;
+  }
 }
 
 
