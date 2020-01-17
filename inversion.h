@@ -29,8 +29,53 @@
 */
 //=================================================================================================
 
-inline void invertComplex1x1(std::complex<double>**A){
-	A[0][0] = 1.0/A[0][0];
+#ifndef _H_INVERSION_
+#define _H_INVERSION_
+/*
+lapacke uses C99 _Complex by default, which Visual C++ doesn't support. 
+You can define those macros as suggested to use std::complex instead, which are supported by Visual C++:
+https://stackoverflow.com/questions/24853450/errors-using-lapack-c-header-in-c-with-visual-studio-2010
+*/
+#include <complex>
+#define lapack_complex_float std::complex<float>
+#define lapack_complex_double std::complex<double>
+#include "lapacke.h"
+
+inline std::complex<double> detComplexNxN(complex<double>** mat, int dim) {
+  int i;
+  std::complex<double> det;
+  double t;
+  int n;
+   int* idx;
+  std::complex<double>* tmat;
+  n = dim;
+
+  idx = new int[n];
+  tmat = new complex<double>[dim * dim];
+  //TODO
+  //memcpy : mat -> tmat;
+  for (i = 0; i < n; i++) {
+    memcpy(tmat + i * n * sizeof(complex<double>), mat[i], sizeof(complex<double>)*n);
+  }
+
+  //TODO
+  //row ? col ?
+  LAPACKE_zgetrf(LAPACK_ROW_MAJOR, n, n, tmat, n, idx);
+
+  det = { 1.0,0.0 };
+  for (i = 0; i < n; i++) {
+    if (i + 1 != idx[i])
+      det *= -tmat[i * n + i];
+    else
+      det *= tmat[i * n + i];
+  }
+  delete[] idx;
+  delete[] tmat;
+  return det;
+}
+
+inline void invertComplex1x1(std::complex<double>**A,std::complex<double>**B){
+	B[0][0] = 1.0/A[0][0];
 }
 
 inline std::complex<double> detComplex2x2( std::complex<double>**A ){
@@ -38,7 +83,7 @@ inline std::complex<double> detComplex2x2( std::complex<double>**A ){
 	return std::complex<double> det(1.0/A[0][0]);
 }
 
-inline void invertComplex2x2( std::complex<double>**A )
+inline void invertComplex2x2( std::complex<double>**A ,std::complex<double>**B)
 {
   
    const std::complex<double> det( A[0][0]*A[1][1] - A[0][1]*A[1][0] );
@@ -59,7 +104,7 @@ inline std::complex<double> detComplex2x2( std::complex<double>**A )
 }
 
 
-inline void invertComplex3x3( std::complex<double>**A )
+inline void invertComplex3x3( std::complex<double>**A ,std::complex<double>**B)
 {
   
    B[0][0] = A[1][1]*A[2][2] - A[1][2]*A[2][1];
@@ -83,15 +128,15 @@ inline void invertComplex3x3( std::complex<double>**A )
 inline std::complex<double> detComplex3x3( std::complex<double>**A )
 {
   
-   B[0][0] = A[1][1]*A[2][2] - A[1][2]*A[2][1];
-   B[1][0] = A[1][2]*A[2][0] - A[1][0]*A[2][2];
-   B[2][0] = A[1][0]*A[2][1] - A[1][1]*A[2][0];
+   std::complex<double>b0 = A[1][1]*A[2][2] - A[1][2]*A[2][1];
+  std::complex<double>b1 = A[1][2]*A[2][0] - A[1][0]*A[2][2];
+   std::complex<double>b2 = A[1][0]*A[2][1] - A[1][1]*A[2][0];
 
-   return std::complex<double> det( A[0][0]*B[0][0] + A[0][1]*B[1][0] + A[0][2]*B[2][0] );
+   return std::complex<double> det( A[0][0]*b0 + A[0][1]*b1 + A[0][2]*b2 );
 }
 
 
-inline void invertComplex4x4( std::complex<double>**A )
+inline void invertComplex4x4( std::complex<double>**A ,std::complex<double>**B)
 {
    std::complex<double> tmp1( A[2][2]*A[3][3] - A[2][3]*A[3][2] );
    std::complex<double> tmp2( A[2][1]*A[3][3] - A[2][3]*A[3][1] );
@@ -146,22 +191,22 @@ inline std::complex<double> detComplex4x4( std::complex<double>**A )
    std::complex<double> tmp2( A[2][1]*A[3][3] - A[2][3]*A[3][1] );
    std::complex<double> tmp3( A[2][1]*A[3][2] - A[2][2]*A[3][1] );
 
-   B[0][0] = A[1][1]*tmp1 - A[1][2]*tmp2 + A[1][3]*tmp3;
+   std::complex<double>b0 = A[1][1]*tmp1 - A[1][2]*tmp2 + A[1][3]*tmp3;
 
    std::complex<double> tmp4( A[2][0]*A[3][3] - A[2][3]*A[3][0] );
    std::complex<double> tmp5( A[2][0]*A[3][2] - A[2][2]*A[3][0] );
 
-   B[1][0] = A[1][2]*tmp4 - A[1][0]*tmp1 - A[1][3]*tmp5;
+   std::complex<double>b1 = A[1][2]*tmp4 - A[1][0]*tmp1 - A[1][3]*tmp5;
 
    tmp1 = A[2][0]*A[3][1] - A[2][1]*A[3][0];
 
-   B[2][0] = A[1][0]*tmp2 - A[1][1]*tmp4 + A[1][3]*tmp1;
-   B[3][0] = A[1][1]*tmp5 - A[1][0]*tmp3 - A[1][2]*tmp1;
+   std::complex<double>b2 = A[1][0]*tmp2 - A[1][1]*tmp4 + A[1][3]*tmp1;
+   std::complex<double>b3 = A[1][1]*tmp5 - A[1][0]*tmp3 - A[1][2]*tmp1;
 
-   return std::complex<double> det( A[0][0]*B[0][0] + A[0][1]*B[1][0] + A[0][2]*B[2][0] + A[0][3]*B[3][0] );
+   return std::complex<double> det( A[0][0]*b0 + A[0][1]*b1 + A[0][2]*b2 + A[0][3]*b3 );
 }
 
-inline void invertComplex5x5( std::complex<double>**A )
+inline void invertComplex5x5( std::complex<double>**A ,std::complex<double>**B)
 {
 
    std::complex<double> tmp1 ( A[3][3]*A[4][4] - A[3][4]*A[4][3] );
@@ -289,26 +334,24 @@ inline std::complex<double> detComplex5x5( std::complex<double>**A )
    std::complex<double> tmp16( A[2][0]*tmp2 - A[2][2]*tmp7 + A[2][4]*tmp9  );
    std::complex<double> tmp17( A[2][0]*tmp3 - A[2][2]*tmp8 + A[2][3]*tmp9  );
 
-   B[0][0] =   A[1][1]*tmp11 - A[1][2]*tmp12 + A[1][3]*tmp13 - A[1][4]*tmp14;
-   B[0][1] = - A[0][1]*tmp11 + A[0][2]*tmp12 - A[0][3]*tmp13 + A[0][4]*tmp14;
-   B[1][0] = - A[1][0]*tmp11 + A[1][2]*tmp15 - A[1][3]*tmp16 + A[1][4]*tmp17;
-   B[1][1] =   A[0][0]*tmp11 - A[0][2]*tmp15 + A[0][3]*tmp16 - A[0][4]*tmp17;
-
+  std::complex<double>b0 =   A[1][1]*tmp11 - A[1][2]*tmp12 + A[1][3]*tmp13 - A[1][4]*tmp14;
+std::complex<double>b1 = - A[1][0]*tmp11 + A[1][2]*tmp15 - A[1][3]*tmp16 + A[1][4]*tmp17;
+  
    std::complex<double> tmp18( A[2][0]*tmp4 - A[2][1]*tmp7 + A[2][4]*tmp10 );
    std::complex<double> tmp19( A[2][0]*tmp5 - A[2][1]*tmp8 + A[2][3]*tmp10 );
    std::complex<double> tmp20( A[2][0]*tmp6 - A[2][1]*tmp9 + A[2][2]*tmp10 );
 
-   B[2][0] =   A[1][0]*tmp12 - A[1][1]*tmp15 + A[1][3]*tmp18 - A[1][4]*tmp19;
-   B[3][0] = - A[1][0]*tmp13 + A[1][1]*tmp16 - A[1][2]*tmp18 + A[1][4]*tmp20;
-   B[4][0] =   A[1][0]*tmp14 - A[1][1]*tmp17 + A[1][2]*tmp19 - A[1][3]*tmp20;
+   std::complex<double>b2 =   A[1][0]*tmp12 - A[1][1]*tmp15 + A[1][3]*tmp18 - A[1][4]*tmp19;
+   std::complex<double>b3 = - A[1][0]*tmp13 + A[1][1]*tmp16 - A[1][2]*tmp18 + A[1][4]*tmp20;
+   std::complex<double>b4 =   A[1][0]*tmp14 - A[1][1]*tmp17 + A[1][2]*tmp19 - A[1][3]*tmp20;
 
 
-   return std::complex<double> det( A[0][0]*B[0][0] + A[0][1]*B[1][0] + A[0][2]*B[2][0] + A[0][3]*B[3][0] + A[0][4]*B[4][0] );
+   return std::complex<double> det( A[0][0]*b0 + A[0][1]*b1 + A[0][2]*b2 + A[0][3]*b3 + A[0][4]*b4 );
 
 
 }
 
-inline void invertComplex6x6( std::complex<double>**A )
+inline void invertComplex6x6( std::complex<double>**A ,std::complex<double>**B )
 {
    std::complex<double> tmp1 ( A[4][4]*A[5][5] - A[4][5]*A[5][4] );
    std::complex<double> tmp2 ( A[4][3]*A[5][5] - A[4][5]*A[5][3] );
@@ -554,8 +597,8 @@ inline std::complex<double> detComplex6x6( std::complex<double>**A )
    std::complex<double> tmp43( A[2][0]*tmp18 - A[2][2]*tmp27 + A[2][3]*tmp29 - A[2][5]*tmp31 );
    std::complex<double> tmp44( A[2][0]*tmp19 - A[2][2]*tmp28 + A[2][3]*tmp30 - A[2][4]*tmp31 );
 
-   B[0][0] =   A[1][1]*tmp36 - A[1][2]*tmp37 + A[1][3]*tmp38 - A[1][4]*tmp39 + A[1][5]*tmp40;
-   B[1][0] = - A[1][0]*tmp36 + A[1][2]*tmp41 - A[1][3]*tmp42 + A[1][4]*tmp43 - A[1][5]*tmp44;
+   std::complex<double>b0 =   A[1][1]*tmp36 - A[1][2]*tmp37 + A[1][3]*tmp38 - A[1][4]*tmp39 + A[1][5]*tmp40;
+   std::complex<double>b1 = - A[1][0]*tmp36 + A[1][2]*tmp41 - A[1][3]*tmp42 + A[1][4]*tmp43 - A[1][5]*tmp44;
 
    std::complex<double> tmp45( A[2][0]*tmp20 - A[2][1]*tmp26 + A[2][4]*tmp32 - A[2][5]*tmp33 );
    std::complex<double> tmp46( A[2][0]*tmp21 - A[2][1]*tmp27 + A[2][3]*tmp32 - A[2][5]*tmp34 );
@@ -563,14 +606,17 @@ inline std::complex<double> detComplex6x6( std::complex<double>**A )
    std::complex<double> tmp48( A[2][0]*tmp23 - A[2][1]*tmp29 + A[2][2]*tmp32 - A[2][5]*tmp35 );
    std::complex<double> tmp49( A[2][0]*tmp24 - A[2][1]*tmp30 + A[2][2]*tmp33 - A[2][4]*tmp35 );
 
-   B[2][0] =   A[1][0]*tmp37 - A[1][1]*tmp41 + A[1][3]*tmp45 - A[1][4]*tmp46 + A[1][5]*tmp47;
-   B[3][0] = - A[1][0]*tmp38 + A[1][1]*tmp42 - A[1][2]*tmp45 + A[1][4]*tmp48 - A[1][5]*tmp49;
+  std::complex<double>b2 =   A[1][0]*tmp37 - A[1][1]*tmp41 + A[1][3]*tmp45 - A[1][4]*tmp46 + A[1][5]*tmp47;
+   std::complex<double>b3 = - A[1][0]*tmp38 + A[1][1]*tmp42 - A[1][2]*tmp45 + A[1][4]*tmp48 - A[1][5]*tmp49;
    std::complex<double> tmp50( A[2][0]*tmp25 - A[2][1]*tmp31 + A[2][2]*tmp34 - A[2][3]*tmp35 );
 
-   B[4][0] =   A[1][0]*tmp39 - A[1][1]*tmp43 + A[1][2]*tmp46 - A[1][3]*tmp48 + A[1][5]*tmp50;
-   B[5][0] = - A[1][0]*tmp40 + A[1][1]*tmp44 - A[1][2]*tmp47 + A[1][3]*tmp49 - A[1][4]*tmp50;
+   std::complex<double>b4 =   A[1][0]*tmp39 - A[1][1]*tmp43 + A[1][2]*tmp46 - A[1][3]*tmp48 + A[1][5]*tmp50;
+   std::complex<double>b5 = - A[1][0]*tmp40 + A[1][1]*tmp44 - A[1][2]*tmp47 + A[1][3]*tmp49 - A[1][4]*tmp50;
 
-   return std::complex<double> det( A[0][0]*B[0][0] + A[0][1]*B[1][0] + A[0][2]*B[2][0] +
-                 A[0][3]*B[3][0] + A[0][4]*B[4][0] + A[0][5]*B[5][0] );
+   return std::complex<double> det( A[0][0]*b0 + A[0][1]*b1 + A[0][2]*b2 +
+                 A[0][3]*b3 + A[0][4]*b4 + A[0][5]*b5 );
 
 }
+
+
+#endif
